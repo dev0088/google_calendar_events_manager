@@ -1,9 +1,11 @@
+from import_export.admin import ImportExportModelAdmin
 from django.contrib import admin
 from . import models
-
+from . import resources
 
 @admin.register(models.Sender)
-class SenderAdmin(admin.ModelAdmin):
+class SenderAdmin(ImportExportModelAdmin):
+    resource_class = resources.SenderResource
     list_display = (
         'id',
         'email',
@@ -17,7 +19,15 @@ class SenderAdmin(admin.ModelAdmin):
 
     list_display_links = (
         'id',
-        'email'
+        'email',
     )
 
     list_per_page = 50
+
+    search_fields = (
+        'email',
+        'recovery_email',
+        'phone_number',
+        'created_at',
+        'last_location'
+    )
