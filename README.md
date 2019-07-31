@@ -35,7 +35,7 @@ Python/Django + JWT auth backend
 
 	$ source env3/bin/activate
 
-	$ pip install django==1.11
+	$ pip install django==1.11 psycopg2
 
 	$ pip freeze > requirements.txt
 
@@ -45,57 +45,40 @@ Python/Django + JWT auth backend
 ### Get static files
 
 	```
-	$ ./manage.py collectstatic
+	$ python manage.py collectstatic
 	```
 
 ### Migrate models into database
 	```
-	$ ./manage.py makemigrations
+	$ python manage.py makemigrations
 	```
 
 ### Create admin user on server
 
 	```
-	$ ./manage.py migrate
+	$ python manage.py migrate
 
-	$ ./manage.py createsuperuser
+	$ python manage.py createsuperuser
 	```
 
 ### Run server
 	```
-	$ ./manage.py runserver
+	$ python manage.py runserver
+
+  or
+
+  $ python manage.py runserver 0.0.0.0:8000
 	```
 
-### Additional 
-
-	- for postgresql package
-
-	```
-	$ pip install preview-generator
-
-	In the case Mac OS, 
-
-	$ brew install freetype 
-	$ brew install imagemagick
-	$ brew install libmagic
-	$ brew install ghostscript
-
-	$ brew install imagemagick@6
-	$ ln -s /usr/local/Cellar/imagemagick@6/6.9.10-9/lib/libMagickWand-6.Q16.dylib /usr/local/lib/libMagickWand.dylib
-
-	In the case Ubuntu,
-	$ apt-get install zlib1g-dev libjpeg-dev
-
-	In the case CentOS
-	$ yum install zlib1g-dev libjpeg-dev
-	```
 ### Server urls
 
 - http://127.0.0.1:8000
 
-- http://127.0.0.1:8000/api/auth/token/obtain/
+- http://127.0.0.1:8000/admin
 
-- http://127.0.0.1:8000/api/echo
+In the case you run server with `0.0.0.0:8000` option
+- https://192.168.1.120:8000/admin
+
 
 ### Troubleshooting
 - Remove migration files
