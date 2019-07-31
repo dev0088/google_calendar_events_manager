@@ -1,9 +1,13 @@
+from import_export.admin import ImportExportModelAdmin
 from django.contrib import admin
 from . import models
+from . import resources
 
 
 @admin.register(models.Account)
-class AccountAdmin(admin.ModelAdmin):
+class AccountAdmin(ImportExportModelAdmin):
+    resource_class = resources.AccountResource
+
     list_display = (
         'id',
         'email',
@@ -18,3 +22,7 @@ class AccountAdmin(admin.ModelAdmin):
     )
 
     list_per_page = 50
+
+    search_fields = (
+        'email',
+    )

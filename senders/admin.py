@@ -3,6 +3,7 @@ from django.contrib import admin
 from . import models
 from . import resources
 
+
 @admin.register(models.Sender)
 class SenderAdmin(ImportExportModelAdmin):
     resource_class = resources.SenderResource
