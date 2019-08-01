@@ -1,7 +1,7 @@
 from django.contrib import admin
 from . import models
 from accounts.models import Account
-from events.forms import AccountManageForm
+# from events.forms import AccountManageForm
 from senders.models import Sender
 
 
