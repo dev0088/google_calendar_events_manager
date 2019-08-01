@@ -72,9 +72,7 @@ Python/Django + JWT auth backend
 
 ### Server urls
 
-- http://127.0.0.1:8000
-
-- http://127.0.0.1:8000/admin
+- admin page: http://127.0.0.1:8000/admin
 
 In the case you run server with `0.0.0.0:8000` option
 - https://192.168.1.120:8000/admin

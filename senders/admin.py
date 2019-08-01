@@ -7,6 +7,7 @@ from . import resources
 @admin.register(models.Sender)
 class SenderAdmin(ImportExportModelAdmin):
     resource_class = resources.SenderResource
+    
     list_display = (
         'id',
         'email',

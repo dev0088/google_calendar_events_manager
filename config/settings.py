@@ -29,6 +29,7 @@ DEBUG = True
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
+    'ea3f60cd.ngrok.io'
 ]
 
 
@@ -128,15 +129,10 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/1.11/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
-
 TIME_ZONE = 'UTC'
-
 USE_I18N = True
-
 USE_L10N = True
-
 USE_TZ = True
-
 IMPORT_EXPORT_USE_TRANSACTIONS = True
 TIME_INPUT_FORMATS = [
     '%Y-%m-%d %H:%M:%S',     # '2006-10-25 14:30:59'
@@ -153,6 +149,45 @@ TIME_INPUT_FORMATS = [
     '%m/%d/%y %H:%M',        # '10/25/06 14:30'
     '%m/%d/%y',              # '10/25/06'
 ]
+GOOGLE_CALENDAR_API_CLIENT_ID = os.environ.get(
+    'GOOGLE_CALENDAR_API_CLIENT_ID', 
+    '495916345885-aglgq6s3prr601o62i693tqjrhfkk8q5.apps.googleusercontent.com'
+)
+GOOGLE_CALENDAR_API_CLIENT_SECRET = os.environ.get(
+    'GOOGLE_CALENDAR_API_CLIENT_SECRET', 
+    '0IYV7UcwuRmmTIdNN5QyXcTa'
+)
+GOOGLE_CALENDAR_API_APP_NAME = os.environ.get(
+    'GOOGLE_CALENDAR_API_APP_NAME', 
+    'GccEnventManagerAPI'
+)
+GOOGLE_CALENDAR_API_REDIRECT_URI = 'https://ea3f60cd.ngrok.io'
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '%(levelname)s %(asctime)s %(module)s %(process)d %(thread)d %(message)s'
+        },
+        'simple': {
+            'format': '%(levelname)s %(message)s'
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple'
+        },
+    },
+    'loggers': {
+        'request_token': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        }
+    }
+}
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.11/howto/static-files/
