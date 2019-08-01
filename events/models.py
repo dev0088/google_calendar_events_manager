@@ -5,8 +5,8 @@ from django.utils.translation import ugettext_lazy as _
 
 class Event(models.Model):
     sender = models.ForeignKey(Sender, related_name='sender_events', on_delete=models.CASCADE)
-    calendar_id = models.CharField(max_length=1024, blank=True, default='')
-    summary = models.TextField(blank=True, default='')
+    summary = models.CharField(max_length=254, blank=True, default='')
+    description = models.TextField(blank=True, default='')
     start = models.DateTimeField(blank=False)
     end = models.DateTimeField(blank=False)
     accounts = models.ManyToManyField(
@@ -20,6 +20,7 @@ class Event(models.Model):
         related_name="event_set",
         related_query_name="account",
     )
+    calendar_id = models.CharField(max_length=1024, blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

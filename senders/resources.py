@@ -7,7 +7,8 @@ class SenderResource(resources.ModelResource):
         model = Sender
         fields = (
             'email',
-            'password',
+            'google_oauth2_client_id',
+            'google_oauth2_secrete',
             'recovery_email',
             'phone_number',
             'created_at',
