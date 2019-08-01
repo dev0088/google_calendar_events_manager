@@ -31,15 +31,15 @@ class EventAdmin(admin.ModelAdmin):
         print(obj)
         service = google_calendar.google_calendar_connection()
         event = {
-            'summary': 'Google I/O 2015',
-            'location': '800 Howard St., San Francisco, CA 94103',
-            'description': "anything",
+            'summary': 'For Sydorov',
+            # 'location': '800 Howard St., San Francisco, CA 94103',
+            'description': "Sydorov, show this",
             'start': {
-                'dateTime': '2019-08-03T09:00:00-07:00',
+                'dateTime': '2019-08-04T09:00:00-07:00',
                 'timeZone': 'America/Los_Angeles',
             },
             'end': {
-                'dateTime': '2019-08-03T17:00:00-07:00',
+                'dateTime': '2019-08-04T17:00:00-07:00',
                 'timeZone': 'America/Los_Angeles',
             },
             # 'recurrence': [
