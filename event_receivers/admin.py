@@ -27,7 +27,7 @@ class EventReceiverAdmin(admin.ModelAdmin):
 
     list_per_page = 50
 
-    readonly_fields = ["opened", "clicked"]
+    readonly_fields = ['opened', 'clicked']
 
     def sender(self, obj):
         return obj.event.sender.email

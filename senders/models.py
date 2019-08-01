@@ -3,7 +3,8 @@ from django.db import models
 
 class Sender(models.Model):
     email = models.CharField(max_length=254, blank=False)
-    password = models.CharField(max_length=50, blank=False)
+    google_oauth2_client_id = models.CharField(max_length=254, blank=True, default='')
+    google_oauth2_secrete = models.CharField(max_length=254, blank=True, default='')
     recovery_email = models.CharField(max_length=254, blank=True, default='')
     phone_number = models.CharField(max_length=20, blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)

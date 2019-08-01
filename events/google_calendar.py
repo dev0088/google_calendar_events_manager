@@ -9,7 +9,7 @@ from config import settings
 #---------------------------------------------------------------------------
 # google_calendar_connection
 #---------------------------------------------------------------------------
-def google_calendar_connection():
+def google_calendar_connection(oauth2_clinet_id, oauth2_secrete):
     """
     This method used for connect with google calendar api.
     """
@@ -21,11 +21,10 @@ def google_calendar_connection():
         httpd = tools.ClientRedirectServer(('localhost', 0), tools.ClientRedirectHandler)
         httpd.timeout = 60
         redirect_uri = 'http://%s:%s/' % httpd.server_address        
-    print( redirect_uri )
 
     flow = OAuth2WebServerFlow(
-        client_id=settings.GOOGLE_CALENDAR_API_CLIENT_ID, 
-        client_secret=settings.GOOGLE_CALENDAR_API_CLIENT_SECRET,
+        client_id=oauth2_clinet_id, 
+        client_secret=oauth2_secrete,
         redirect_uri=redirect_uri,
         scope='https://www.googleapis.com/auth/calendar',
         user_agent=settings.GOOGLE_CALENDAR_API_APP_NAME
@@ -43,21 +42,6 @@ def google_calendar_connection():
     
     return service
 
-def add_event():
-    service = google_calendar_connection()
-    
-    event = {
-        'summary': 'Google I/O 2015',
-        'location': '800 Howard St., San Francisco, CA 94103',
-        'description': "anything",
-        'start': {
-            'dateTime': '2019-08-03T09:00:00-07:00',
-            'timeZone': 'America/Los_Angeles',
-        },
-        'end': {
-            'dateTime': '2019-08-03T17:00:00-07:00',
-            'timeZone': 'America/Los_Angeles',
-        },
-    }
-    
-    event = service.events().insert(calendarId='primary', body=event).execute()
+def add_event(event, oauth2_clinet_id, oauth2_secrete):
+    service = google_calendar_connection(oauth2_clinet_id, oauth2_secrete)
+    return service.events().insert(calendarId='primary', body=event).execute()

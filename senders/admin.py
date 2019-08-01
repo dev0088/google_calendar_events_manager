@@ -11,6 +11,7 @@ class SenderAdmin(ImportExportModelAdmin):
     list_display = (
         'id',
         'email',
+        'google_oauth2_client_id',
         'recovery_email',
         'phone_number',
         'created_at',
@@ -22,12 +23,14 @@ class SenderAdmin(ImportExportModelAdmin):
     list_display_links = (
         'id',
         'email',
+        'google_oauth2_client_id'
     )
 
     list_per_page = 50
 
     search_fields = (
         'email',
+        'google_oauth2_client_id',
         'recovery_email',
         'phone_number',
         'created_at',
