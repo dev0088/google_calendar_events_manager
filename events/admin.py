@@ -2,30 +2,40 @@ from django.contrib import admin
 from . import models
 from . import google_calendar
 
+
 @admin.register(models.Event)
 class EventAdmin(admin.ModelAdmin):
     list_display = (
         'id',
-        'creator',
+        'sender_display',
         'summary',
         'start',
         'end',
+        'accounts_display',
         'created_at',
         'updated_at'
     )
 
     list_display_links = (
         'id',
-        'creator',
+        'sender_display',
         'summary',
         'start',
         'end',
     )
     
-    list_per_page = 50
+    list_per_page = 50  
+    filter_horizontal = ('accounts',)
 
-    def creator(self, obj):
-        return obj.creator.email
+    def sender_display(self, obj):
+        return obj.sender.email
+
+    def accounts_display(self, obj):
+        return ''
+
+    sender_display.short_description = "Sender"
+    accounts_display.short_description = "Accounts"
+
 
     def save_model(self, request, obj, form, change):
         print(obj)

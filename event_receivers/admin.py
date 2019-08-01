@@ -1,5 +1,8 @@
 from django.contrib import admin
 from . import models
+from accounts.models import Account
+# from events.forms import AccountManageForm
+from senders.models import Sender
 
 
 @admin.register(models.EventReceiver)
@@ -27,7 +30,7 @@ class EventReceiverAdmin(admin.ModelAdmin):
     readonly_fields = ["opened", "clicked"]
 
     def sender(self, obj):
-        return obj.event.creator.email
+        return obj.event.sender.email
 
     def receiver(self, obj):
         return obj.account.email
