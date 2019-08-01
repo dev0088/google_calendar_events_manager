@@ -29,7 +29,8 @@ DEBUG = True
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
-    'ea3f60cd.ngrok.io'
+    'ea3f60cd.ngrok.io',
+    os.environ.get('SERVER_HOST', 'gceventmanager.herokuapp.com')
 ]
 
 
@@ -90,7 +91,6 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/1.11/ref/settings/#databases
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
