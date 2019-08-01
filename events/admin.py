@@ -1,31 +1,52 @@
 from django.contrib import admin
+from django.contrib.admin import widgets
+# from events.multiselect import widget
 from . import models
 from . import google_calendar
+
+
 
 @admin.register(models.Event)
 class EventAdmin(admin.ModelAdmin):
     list_display = (
         'id',
-        'creator',
+        'sender_display',
         'summary',
         'start',
         'end',
+        'accounts_display',
         'created_at',
         'updated_at'
     )
 
     list_display_links = (
         'id',
-        'creator',
+        'sender_display',
         'summary',
         'start',
         'end',
     )
     
-    list_per_page = 50
+    list_per_page = 50  
+    filter_horizontal = ('accounts',)
+    # def formfield_for_manytomany(self, db_field, request, **kwargs):
+    #     vertical = False  # change to True if you prefer boxes to be stacked vertically
+    #     kwargs['widget'] = widgets.FilteredSelectMultiple(
+    #         db_field.verbose_name,
+    #         vertical,
+    #     )
+    #     return super(EventAdmin, self).formfield_for_manytomany(db_field, request, **kwargs)
 
-    def creator(self, obj):
-        return obj.creator.email
+
+    def sender_display(self, obj):
+        return obj.sender.email
+
+    def accounts_display(self, obj):
+        return ''
+
+    sender_display.short_description = "Sender"
+    accounts_display.short_description = "Accounts"
+
 
     def save_model(self, request, obj, form, change):
         print(obj)

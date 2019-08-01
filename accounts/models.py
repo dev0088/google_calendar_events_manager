@@ -11,6 +11,6 @@ class Account(models.Model):
 
     class Meta:
         db_table = "accounts"
-        ordering = ('id',)
+        ordering = ('email',)
         unique_together = ('email', 'id')
         managed = True

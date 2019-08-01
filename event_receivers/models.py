@@ -4,8 +4,8 @@ from accounts.models import Account
 
 
 class EventReceiver(models.Model):
-    event = models.ForeignKey(Event, related_name='event_receivers', on_delete=models.CASCADE)
-    account = models.ForeignKey(Account, related_name='account_receivers', on_delete=models.CASCADE)
+    event = models.ForeignKey(Event, related_name='event_receiver_events', on_delete=models.CASCADE)
+    account = models.ForeignKey(Account, related_name='event_receiver_accounts', on_delete=models.CASCADE)
     opened = models.BooleanField(default=False)
     clicked = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -13,7 +13,7 @@ class EventReceiver(models.Model):
 
     def __str__(self):
         return "{sender}->{receiver}: {event}".format(
-            sender=self.event.creator.email,
+            sender=self.event.sender.email,
             receiver=self.account.email,
             event=self.event.summary
         )

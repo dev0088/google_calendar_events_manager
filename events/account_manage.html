@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% load static %}
+{% block css %}
+    {{ form.media }}
+    <script type="text/javascript" src="{% static 'js/jquery-3.1.1.min.js' %}"></script>
+    <script type="text/javascript" src="/static/admin/js/jquery.min.js"></script>
+    <script type="text/javascript" src="/static/admin/js/jquery.init.js"></script>
+{% endblock %}
+{% block content %}
+{{ form.media }}
+<form>
+  {{ form.accounts }}
+</form>
+{% endblock %}

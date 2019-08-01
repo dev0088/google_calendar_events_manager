@@ -16,6 +16,6 @@ class Sender(models.Model):
 
     class Meta:
         db_table = "senders"
-        ordering = ('id',)
+        ordering = ('email',)
         unique_together = ('email',)
         managed = True
