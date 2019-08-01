@@ -19,6 +19,7 @@ class Event(models.Model):
             summary=self.summary
         )
 
+
     class Meta:
         db_table = "events"
         ordering = ('start', 'end', 'creator')
