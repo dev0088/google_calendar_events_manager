@@ -161,7 +161,47 @@ GOOGLE_CALENDAR_API_APP_NAME = os.environ.get(
     'GOOGLE_CALENDAR_API_APP_NAME', 
     'GccEnventManagerAPI'
 )
-GOOGLE_CALENDAR_API_REDIRECT_URI = 'https://ea3f60cd.ngrok.io'
+GOOGLE_CALENDAR_API_REDIRECT_URI = os.environ.get(
+    'GOOGLE_CALENDAR_API_REDIRECT_URI', 
+    'https://ea3f60cd.ngrok.io'
+)
+
+HTTPS_PROXY = os.environ.get(
+    'https_proxy', 
+    'https://ninjadev:123qweasd@gate.smartproxy.com:7000'
+)
+HTTP_PROXY = os.environ.get(
+    'http_proxy', 
+    'https://ninjadev:123qweasd@gate.smartproxy.com:7000'
+)
+
+SMART_PROXY_HTTPS_URL =  os.environ.get(
+    'SMART_PROXY_HTTPS_URL', 
+    'https://ninjadev:123qweasd@gate.smartproxy.com:7000'
+)
+SMART_PROXY_HTTP_URL = os.environ.get(
+    'SMART_PROXY_HTTP_URL', 
+    'http://ninjadev:123qweasd@gate.smartproxy.com:7000'
+)
+SMART_PROXY_ADDRESS = os.environ.get(
+    'gate.smartproxy.com', 
+    7000
+)
+SMART_PROXY_PORT = os.environ.get(
+    'SMART_PROXY_PORT', 
+    7000
+)
+SMART_PROXY_USER_NAME = os.environ.get(
+    'SMART_PROXY_USER_NAME', 
+    'sp45159786'
+    # 'ninjadev'
+)
+SMART_PROXY_PASSWORD = os.environ.get(
+    'SMART_PROXY_PASSWORD', 
+    'Y**UY6M9Bbj'
+    # '123qweasd'
+)
+
 
 LOGGING = {
     'version': 1,
