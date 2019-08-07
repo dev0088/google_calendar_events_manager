@@ -1,13 +1,17 @@
 from django.contrib import admin
 import nested_admin
-from django.utils.timezone import get_current_timezone
+import json
 from . import models
+from django.utils.timezone import get_current_timezone
+from django.core.serializers.json import DjangoJSONEncoder
 from . import google_calendar
 from accounts.models import Account
 from event_receivers.models import EventReceiver
-import json
-from django.core.serializers.json import DjangoJSONEncoder
-from django import forms
+from .serializers import EventSerializer, ReminderSerializer, OverrideSerializer
+from django.core import serializers
+# from rest_framework.renderers import JSONRenderer
+# from rest_framework.parsers import JSONParser
+
 
 class OverrideInline(nested_admin.NestedStackedInline):
     model = models.Override
@@ -19,15 +23,6 @@ class ReminderInline(nested_admin.NestedStackedInline):
     model = models.Reminder
     extra = 0
     inlines = [OverrideInline]
-
-
-class ReminderForm(forms.ModelForm):
-    class Meta:
-        model = models.Reminder
-        fields = (
-            'use_default', 
-        )
-        inlines = [OverrideInline]
 
 
 @admin.register(models.Event)
@@ -56,7 +51,6 @@ class EventAdmin(nested_admin.NestedModelAdmin):
     fields = ['sender', 'summary', 'description', ('start', 'end', ), 'accounts',]
     readonly_fields = ['calendar_id']
     filter_horizontal = ('accounts',)
-    
 
     def sender_display(self, obj):
         return obj.sender.email
@@ -85,9 +79,10 @@ class EventAdmin(nested_admin.NestedModelAdmin):
                 'dateTime': obj.end.isoformat(), #'2019-08-04T17:00:00-07:00',
                 'timeZone': get_current_timezone().tzname(None) #'America/Los_Angeles',
             },
-            'attendees': [{'email': account.email} for account in form.cleaned_data['accounts']]
+            'attendees': [{'email': account.email} for account in form.cleaned_data['accounts']],
+            'reminders': json.loads(json.dumps(ReminderSerializer(obj.event_reminder).data))
         }
-
+        print('====== event: ', event)
         google_calendar_event = google_calendar.add_event(
             event, 
             obj.sender.google_oauth2_client_id, 

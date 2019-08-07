@@ -3,7 +3,7 @@ from senders.models import Sender
 from accounts.models import Account
 from django.utils.translation import ugettext_lazy as _
 from django.core.validators import MaxValueValidator, MinValueValidator
-
+from django.core import serializers
 
 class Event(models.Model):
     sender = models.ForeignKey(Sender, related_name='sender_events', on_delete=models.CASCADE)
@@ -46,7 +46,7 @@ Reminder model for event
 """
 class Reminder(models.Model):
     # event = models.ForeignKey(Event, related_name='reminder_events', on_delete=models.CASCADE)
-    use_default = models.BooleanField(blank=False, default=False)
+    useDefault = models.BooleanField(blank=False, default=False)
     event = models.OneToOneField(
         Event,
         verbose_name=_('event_reminder'),
@@ -58,9 +58,7 @@ class Reminder(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return "{overrides}".format(
-            overrides=self.reminder_overrides 
-        )
+        return ''
 
     class Meta:
         ordering = ('created_at',)
@@ -75,16 +73,24 @@ REMINDER_OVERRIDE_METHODS = (
     ('popup', 'popup'),
     ('sms', 'sms'),
 )
+
+class OverrideManager(models.Manager):
+    def get_queryset(self):
+        return super(OverrideManager, self).get_queryset().filter(active=True)
+
 class Override(models.Model):
-    reminder = models.ForeignKey(Reminder, related_name='reminder_overrides', on_delete=models.CASCADE)
+    reminder = models.ForeignKey(Reminder, related_name='overrides', on_delete=models.CASCADE)
     method = models.CharField(max_length=5, blank=False, choices=REMINDER_OVERRIDE_METHODS)
     minutes = models.PositiveIntegerField(default=10, validators=[MinValueValidator(1), MaxValueValidator(40320)])
 
     def __str__(self):
-        return "{method}: {minutes} minutes".format(
-            method=self.method,
-            minutes=self.minutes
-        )   
+        return '' #serializers.serialize("json", self)
+
     class Meta:
-        verbose_name = _("Override")
-        verbose_name_plural = _("Overrides")
+        db_table = "override"
+        managed = True
+        ordering = ('id',)
+        unique_together = ('id', )
+        # verbose_name = _("Override")
+        # verbose_name_plural = _("Overrides")
+        
