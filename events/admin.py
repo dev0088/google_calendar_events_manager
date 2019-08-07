@@ -65,8 +65,53 @@ class EventAdmin(nested_admin.NestedModelAdmin):
 
     inlines = [ReminderInline,]
 
-    def save_model(self, request, obj, form, change):
-        # Send add_event request to google
+    # def save_model(self, request, obj, form, change):
+    #     print ('======= form.cleaned_data: ', form.cleaned_data)
+    #     print ('======= save_model->obj: ', EventSerializer(obj).data)
+    #     # Send add_event request to google
+    #     event = {
+    #         'summary': obj.summary,
+    #         'location': obj.sender.last_location,
+    #         'description': obj.description,
+    #         'start': {
+    #             'dateTime': obj.start.isoformat(),
+    #             'timeZone': get_current_timezone().tzname(None)
+    #         },
+    #         'end': {
+    #             'dateTime': obj.end.isoformat(), #'2019-08-04T17:00:00-07:00',
+    #             'timeZone': get_current_timezone().tzname(None) #'America/Los_Angeles',
+    #         },
+    #         'attendees': [{'email': account.email} for account in form.cleaned_data['accounts']],
+    #         # 'reminders': json.loads(json.dumps(ReminderSerializer(obj.event_reminder).data))
+    #     }
+    #     print('====== event: ', event)
+    #     google_calendar_event = google_calendar.add_event(
+    #         event, 
+    #         obj.sender.google_oauth2_client_id, 
+    #         obj.sender.google_oauth2_secrete
+    #     )
+
+    #     obj.calendar_id = google_calendar_event.get('id')
+    #     super().save_model(request, obj, form, change)
+
+    #     # Add EventReceivers for each account matching to this event
+    #     current_event = models.Event.objects.filter(calendar_id=obj.calendar_id).first()
+    #     if change:
+    #         # Remove all associated old event_receivers.
+    #         EventReceiver.objects.filter(event_id=current_event.id).delete()
+
+    #     # for account in current_event.accounts.all():
+    #     for account in form.cleaned_data['accounts']:
+    #         new_event_receiver = EventReceiver.objects.create(
+    #             event=current_event,
+    #             account=account
+    #         )
+    #         new_event_receiver.save()
+
+    def save_related(self, request, form, formsets, change):
+        obj = form.instance
+
+        # Make event json data
         event = {
             'summary': obj.summary,
             'location': obj.sender.last_location,
@@ -80,17 +125,32 @@ class EventAdmin(nested_admin.NestedModelAdmin):
                 'timeZone': get_current_timezone().tzname(None) #'America/Los_Angeles',
             },
             'attendees': [{'email': account.email} for account in form.cleaned_data['accounts']],
-            'reminders': json.loads(json.dumps(ReminderSerializer(obj.event_reminder).data))
+            # 'reminders': json.loads(json.dumps(ReminderSerializer(obj.event_reminder).data))
         }
+
+        # Check reminder data and add them if set
+        if formsets[0] and formsets[0].cleaned_data and formsets[0].cleaned_data[0]:
+            # Add useDefault value
+            event['reminders'] = ReminderSerializer(formsets[0].cleaned_data[0]).data 
+            # Add overrides value
+            if formsets[1]:
+                event['reminders']['overrides'] = []
+                for override_form in formsets[1]:
+                    event['reminders']['overrides'].append(OverrideSerializer(override_form.cleaned_data).data)
+
         print('====== event: ', event)
+
+        # Send add_event request to google
         google_calendar_event = google_calendar.add_event(
             event, 
             obj.sender.google_oauth2_client_id, 
             obj.sender.google_oauth2_secrete
         )
-
         obj.calendar_id = google_calendar_event.get('id')
-        super().save_model(request, obj, form, change)
+        
+        # Save model
+        obj.save()
+        super(EventAdmin, self).save_related(request, form, formsets, change)
 
         # Add EventReceivers for each account matching to this event
         current_event = models.Event.objects.filter(calendar_id=obj.calendar_id).first()
