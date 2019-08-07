@@ -4,3 +4,4 @@ env3
 __pycache__
 .env
 static
+calendar.dat

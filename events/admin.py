@@ -1,15 +1,32 @@
 from django.contrib import admin
-from django.utils.timezone import get_current_timezone
+import nested_admin
+import json
 from . import models
+from django.utils.timezone import get_current_timezone
+from django.core.serializers.json import DjangoJSONEncoder
 from . import google_calendar
 from accounts.models import Account
 from event_receivers.models import EventReceiver
-import json
-from django.core.serializers.json import DjangoJSONEncoder
+from .serializers import EventSerializer, ReminderSerializer, OverrideSerializer
+from django.core import serializers
+# from rest_framework.renderers import JSONRenderer
+# from rest_framework.parsers import JSONParser
+
+
+class OverrideInline(nested_admin.NestedStackedInline):
+    model = models.Override
+    extra = 0
+    fields = [('method', 'minutes')]
+
+
+class ReminderInline(nested_admin.NestedStackedInline):
+    model = models.Reminder
+    extra = 0
+    inlines = [OverrideInline]
 
 
 @admin.register(models.Event)
-class EventAdmin(admin.ModelAdmin):
+class EventAdmin(nested_admin.NestedModelAdmin):
     list_display = (
         'id',
         'sender_display',
@@ -21,7 +38,6 @@ class EventAdmin(admin.ModelAdmin):
         'created_at',
         'updated_at'
     )
-
     list_display_links = (
         'id',
         'sender_display',
@@ -30,8 +46,9 @@ class EventAdmin(admin.ModelAdmin):
         'start',
         'end',
     )
-    
     list_per_page = 50
+
+    fields = ['sender', 'summary', 'description', ('start', 'end', ), 'accounts',]
     readonly_fields = ['calendar_id']
     filter_horizontal = ('accounts',)
 
@@ -46,8 +63,55 @@ class EventAdmin(admin.ModelAdmin):
     sender_display.short_description = "Sender"
     accounts_display.short_description = "Accounts"
 
-    def save_model(self, request, obj, form, change):
-        # Send add_event request to google
+    inlines = [ReminderInline,]
+
+    # def save_model(self, request, obj, form, change):
+    #     print ('======= form.cleaned_data: ', form.cleaned_data)
+    #     print ('======= save_model->obj: ', EventSerializer(obj).data)
+    #     # Send add_event request to google
+    #     event = {
+    #         'summary': obj.summary,
+    #         'location': obj.sender.last_location,
+    #         'description': obj.description,
+    #         'start': {
+    #             'dateTime': obj.start.isoformat(),
+    #             'timeZone': get_current_timezone().tzname(None)
+    #         },
+    #         'end': {
+    #             'dateTime': obj.end.isoformat(), #'2019-08-04T17:00:00-07:00',
+    #             'timeZone': get_current_timezone().tzname(None) #'America/Los_Angeles',
+    #         },
+    #         'attendees': [{'email': account.email} for account in form.cleaned_data['accounts']],
+    #         # 'reminders': json.loads(json.dumps(ReminderSerializer(obj.event_reminder).data))
+    #     }
+    #     print('====== event: ', event)
+    #     google_calendar_event = google_calendar.add_event(
+    #         event, 
+    #         obj.sender.google_oauth2_client_id, 
+    #         obj.sender.google_oauth2_secrete
+    #     )
+
+    #     obj.calendar_id = google_calendar_event.get('id')
+    #     super().save_model(request, obj, form, change)
+
+    #     # Add EventReceivers for each account matching to this event
+    #     current_event = models.Event.objects.filter(calendar_id=obj.calendar_id).first()
+    #     if change:
+    #         # Remove all associated old event_receivers.
+    #         EventReceiver.objects.filter(event_id=current_event.id).delete()
+
+    #     # for account in current_event.accounts.all():
+    #     for account in form.cleaned_data['accounts']:
+    #         new_event_receiver = EventReceiver.objects.create(
+    #             event=current_event,
+    #             account=account
+    #         )
+    #         new_event_receiver.save()
+
+    def save_related(self, request, form, formsets, change):
+        obj = form.instance
+
+        # Make event json data
         event = {
             'summary': obj.summary,
             'location': obj.sender.last_location,
@@ -60,17 +124,33 @@ class EventAdmin(admin.ModelAdmin):
                 'dateTime': obj.end.isoformat(), #'2019-08-04T17:00:00-07:00',
                 'timeZone': get_current_timezone().tzname(None) #'America/Los_Angeles',
             },
-            'attendees': [{'email': account.email} for account in form.cleaned_data['accounts']]
+            'attendees': [{'email': account.email} for account in form.cleaned_data['accounts']],
+            # 'reminders': json.loads(json.dumps(ReminderSerializer(obj.event_reminder).data))
         }
 
+        # Check reminder data and add them if set
+        if formsets[0] and formsets[0].cleaned_data and formsets[0].cleaned_data[0]:
+            # Add useDefault value
+            event['reminders'] = ReminderSerializer(formsets[0].cleaned_data[0]).data 
+            # Add overrides value
+            if formsets[1]:
+                event['reminders']['overrides'] = []
+                for override_form in formsets[1]:
+                    event['reminders']['overrides'].append(OverrideSerializer(override_form.cleaned_data).data)
+
+        print('====== event: ', event)
+
+        # Send add_event request to google
         google_calendar_event = google_calendar.add_event(
             event, 
             obj.sender.google_oauth2_client_id, 
             obj.sender.google_oauth2_secrete
         )
-
         obj.calendar_id = google_calendar_event.get('id')
-        super().save_model(request, obj, form, change)
+        
+        # Save model
+        obj.save()
+        super(EventAdmin, self).save_related(request, form, formsets, change)
 
         # Add EventReceivers for each account matching to this event
         current_event = models.Event.objects.filter(calendar_id=obj.calendar_id).first()

@@ -46,7 +46,9 @@ DJANGO_APPS = [
 ]
 
 THIRD_PARTY_APPS = [
-    'import_export'
+    'import_export',
+    'nested_admin',
+    'rest_framework'
 ]
 
 LOCAL_APPS = [
