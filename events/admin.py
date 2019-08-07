@@ -1,4 +1,5 @@
 from django.contrib import admin
+import nested_admin
 from django.utils.timezone import get_current_timezone
 from . import models
 from . import google_calendar
@@ -6,10 +7,31 @@ from accounts.models import Account
 from event_receivers.models import EventReceiver
 import json
 from django.core.serializers.json import DjangoJSONEncoder
+from django import forms
+
+class OverrideInline(nested_admin.NestedStackedInline):
+    model = models.Override
+    extra = 0
+    fields = [('method', 'minutes')]
+
+
+class ReminderInline(nested_admin.NestedStackedInline):
+    model = models.Reminder
+    extra = 0
+    inlines = [OverrideInline]
+
+
+class ReminderForm(forms.ModelForm):
+    class Meta:
+        model = models.Reminder
+        fields = (
+            'use_default', 
+        )
+        inlines = [OverrideInline]
 
 
 @admin.register(models.Event)
-class EventAdmin(admin.ModelAdmin):
+class EventAdmin(nested_admin.NestedModelAdmin):
     list_display = (
         'id',
         'sender_display',
@@ -21,7 +43,6 @@ class EventAdmin(admin.ModelAdmin):
         'created_at',
         'updated_at'
     )
-
     list_display_links = (
         'id',
         'sender_display',
@@ -30,10 +51,12 @@ class EventAdmin(admin.ModelAdmin):
         'start',
         'end',
     )
-    
     list_per_page = 50
+
+    fields = ['sender', 'summary', 'description', ('start', 'end', ), 'accounts',]
     readonly_fields = ['calendar_id']
     filter_horizontal = ('accounts',)
+    
 
     def sender_display(self, obj):
         return obj.sender.email
@@ -45,6 +68,8 @@ class EventAdmin(admin.ModelAdmin):
 
     sender_display.short_description = "Sender"
     accounts_display.short_description = "Accounts"
+
+    inlines = [ReminderInline,]
 
     def save_model(self, request, obj, form, change):
         # Send add_event request to google
