@@ -5,6 +5,7 @@ from django.utils.translation import ugettext_lazy as _
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.core import serializers
 
+
 class Event(models.Model):
     sender = models.ForeignKey(Sender, related_name='sender_events', on_delete=models.CASCADE)
     summary = models.CharField(max_length=254, blank=True, default='')
