@@ -44,6 +44,7 @@ def google_calendar_connection(oauth2_clinet_id, oauth2_secrete):
     
     return service
 
+
 def add_event(event, oauth2_clinet_id, oauth2_secrete):
     service = google_calendar_connection(oauth2_clinet_id, oauth2_secrete)
     try:
@@ -78,5 +79,17 @@ def update_event(event_id, event, oauth2_clinet_id, oauth2_secrete):
             return None
     return updated_event
 
-# https://calendar.google.com/event?action=TEMPLATE&tmeid=Ym52aHRvbWJqNjVnZHBpZjVzMDJ2azFrY2MgbmluamFkZXY5OTlAbQ&tmsrc=ninjadev999%40gmail.com
-# https://calendar.google.com/calendar/embed?src=ninjadev999%40gmail.com&ctz=America%2FLos_Angeles
+
+def delete_event(event_id, oauth2_clinet_id, oauth2_secrete):
+    service = google_calendar_connection(oauth2_clinet_id, oauth2_secrete)
+    try:
+        res = service.events().delete(
+            calendarId=settings.GOOGLE_CALENDAR_API_DEFAULT_CALENDAR_ID, 
+            eventId='eventId'
+        ).execute()
+        print('====== delete_event: ', res)
+    except HttpError as e:
+        print('====== delete_event: error: ', e)
+        return False
+    return True
+    
