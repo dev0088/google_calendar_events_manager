@@ -167,7 +167,10 @@ GOOGLE_CALENDAR_API_REDIRECT_URI = os.environ.get(
     'GOOGLE_CALENDAR_API_REDIRECT_URI', 
     'https://ea3f60cd.ngrok.io'
 )
-
+GOOGLE_CALENDAR_API_DEFAULT_CALENDAR_ID = os.environ.get(
+    'GOOGLE_CALENDAR_API_DEFAULT_CALENDAR_ID', 
+    'primary'
+)
 HTTPS_PROXY = os.environ.get(
     'https_proxy', 
     'https://ninjadev:123qweasd@gate.smartproxy.com:7000'

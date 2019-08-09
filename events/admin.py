@@ -34,7 +34,6 @@ class RecurrencInline(nested_admin.NestedStackedInline):
         ('ends', 'until', 'count')
     ]
     readonly_fields = ['rule']
-    
 
 
 @admin.register(Event)
@@ -59,10 +58,10 @@ class EventAdmin(nested_admin.NestedModelAdmin):
         'end',
     )
     list_per_page = 50
-
-    fields = ['sender', 'summary', 'description', ('start', 'end', ), 'accounts',]
-    readonly_fields = ['calendar_id']
+    fields = ['calendar_id', 'calendar_event_id', 'sender', 'summary', 'description', ('start', 'end', ), 'accounts',]
+    readonly_fields = ['calendar_id', 'calendar_event_id']
     filter_horizontal = ('accounts',)
+    inlines = [ReminderInline, RecurrencInline]
 
     def sender_display(self, obj):
         return obj.sender.email
@@ -74,8 +73,6 @@ class EventAdmin(nested_admin.NestedModelAdmin):
 
     sender_display.short_description = "Sender"
     accounts_display.short_description = "Accounts"
-
-    inlines = [ReminderInline, RecurrencInline]
 
     def save_related(self, request, form, formsets, change):
         obj = form.instance
@@ -111,9 +108,6 @@ class EventAdmin(nested_admin.NestedModelAdmin):
                     )
 
         # Check recurrence data and add them if set
-        # print ('===== formsets[{index}]: '.format(index=recurrence_formset_index), 
-        #     formsets[recurrence_formset_index].cleaned_data
-        # )
         recurrenct_formset = formsets[recurrence_formset_index]
         if recurrenct_formset and recurrenct_formset.cleaned_data: # and recurrenct_formset.cleaned_data[1]:
             # Add recurrence data
@@ -123,41 +117,44 @@ class EventAdmin(nested_admin.NestedModelAdmin):
                 if str_recurrence:
                     event['recurrence'].append(str_recurrence)
 
-        print('====== event: ', event)
+        print('====== generate_event: ', event)
 
-        if not change:
+        if change:
+            # Update event
+            google_calendar_event = google_calendar.update_event(
+                obj.calendar_event_id,
+                event, 
+                obj.sender.google_oauth2_client_id,
+                obj.sender.google_oauth2_secrete
+            )
+        else:
             # Send add_event request to google
             google_calendar_event = google_calendar.add_event(
                 event, 
                 obj.sender.google_oauth2_client_id, 
                 obj.sender.google_oauth2_secrete
             )
-            obj.calendar_id = google_calendar_event.get('id')
-            print('===== google_calendar_event: ', google_calendar_event)
+            obj.calendar_id = google_calendar_event.get('iCalUID')
+            obj.calendar_event_id = google_calendar_event.get('id')
         
         # Save model
         obj.save()
         super(EventAdmin, self).save_related(request, form, formsets, change)
 
-        # Add EventReceivers for each account matching to this event
-        current_event = Event.objects.filter(calendar_id=obj.calendar_id).first()
+        if google_calendar_event != None: 
+            
 
-        if change:
-            # # Update event
-            # google_calendar_event = google_calendar.update_event(
-            #     current_event.calendar_id,
-            #     calendar_id.event_id,
-            #     event, 
-            #     obj.sender.google_oauth2_client_id, 
-            #     obj.sender.google_oauth2_secrete
-            # )
-            # Remove all associated old event_receivers.
-            EventReceiver.objects.filter(event_id=current_event.id).delete()
+            # Add EventReceivers for each account matching to this event
+            current_event = Event.objects.filter(calendar_id=obj.calendar_id).first()
 
-        # for account in current_event.accounts.all():
-        for account in form.cleaned_data['accounts']:
-            new_event_receiver = EventReceiver.objects.create(
-                event=current_event,
-                account=account
-            )
-            new_event_receiver.save()
+            if change:
+                # Remove all associated old event_receivers.
+                EventReceiver.objects.filter(event_id=current_event.id).delete()
+
+            # for account in current_event.accounts.all():
+            for account in form.cleaned_data['accounts']:
+                new_event_receiver = EventReceiver.objects.create(
+                    event=current_event,
+                    account=account
+                )
+                new_event_receiver.save()
