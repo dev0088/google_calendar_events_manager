@@ -4,6 +4,8 @@ from accounts.models import Account
 from django.utils.translation import ugettext_lazy as _
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.core import serializers
+import datetime
+
 
 class Event(models.Model):
     sender = models.ForeignKey(Sender, related_name='sender_events', on_delete=models.CASCADE)
@@ -45,15 +47,14 @@ class Event(models.Model):
 Reminder model for event
 """
 class Reminder(models.Model):
-    # event = models.ForeignKey(Event, related_name='reminder_events', on_delete=models.CASCADE)
-    useDefault = models.BooleanField(blank=False, default=False)
     event = models.OneToOneField(
         Event,
-        verbose_name=_('event_reminder'),
-        related_name='event_reminder',
+        # verbose_name=_('reminder'),
+        related_name='reminder',
         on_delete=models.CASCADE,
         primary_key=True,
     )
+    useDefault = models.BooleanField(blank=False, default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -84,13 +85,123 @@ class Override(models.Model):
     minutes = models.PositiveIntegerField(default=10, validators=[MinValueValidator(1), MaxValueValidator(40320)])
 
     def __str__(self):
-        return '' #serializers.serialize("json", self)
+        return '{' + "'method':'{method}', 'minutes':{minutes}'".format(
+                method=self.method,
+                minutes=self.minutes
+            ) + '}'
 
     class Meta:
-        db_table = "override"
         managed = True
         ordering = ('id',)
-        unique_together = ('id', )
-        # verbose_name = _("Override")
-        # verbose_name_plural = _("Overrides")
-        
+        # unique_together = ('id', )
+        verbose_name = _("Override")
+        verbose_name_plural = _("Overrides")
+
+
+"""
+Recurrence model for event
+"""
+RECURRENCE_RULES = (
+    ('RRULE', 'RRULE'),
+    ('EXRULE', 'EXRULE'),
+    ('RDATE', 'RDATE'),
+    ('EXDATE', 'EXDATE'),
+)
+RECURRENCE_FREQUENCES = (
+    ('DAILY', 'days'),
+    ('WEEKLY', 'weeks'),
+    ('MONTHLY', 'monthds'),
+    ('MONTHLY', 'years')
+)
+RECURRENCE_ENDS = (
+    ('Never', 'Never'),
+    ('On', 'On'),
+    ('After', 'After')
+)
+def recurrence_json_2_string(obj):
+    res = '{rule}'.format(rule=obj.rule)
+    freq = ''
+    ends = ''
+    
+    if obj.rule:
+        res = '{rule}'.format(rule=obj.rule)
+    else:
+        res = 'RRULE'
+
+    if obj.interval > 0:
+        freq = 'FREQ={freq};INTERVAL={interval}'.format(
+            freq=obj.freq, 
+            interval=obj.interval
+        )
+
+    if obj.ends == 'On':
+        ends = 'UNTIL={until}'.format(until=obj.until.strftime("%Y%m%dT%H%M%SZ"))
+
+    if obj.ends == 'After':
+        ends = 'COUNT={count}'.format(count=obj.count)
+
+    if freq != '' or ends != '':
+        res = res + ':'
+        if freq != '':
+            res = res + freq
+        if ends !='':
+            res = res + ';' + ends
+    else :
+        res = ''
+
+    return res
+
+def recurrence_dict_2_string(obj):
+    res = ''
+    freq = ''
+    ends = ''
+
+    if 'rule' in obj:
+        res = '{rule}'.format(rule=obj['rule'])
+    else:
+        res = 'RRULE'
+    
+    if obj['interval'] > 0:
+        freq = 'FREQ={freq};INTERVAL={interval}'.format(
+            freq=obj['freq'], 
+            interval=obj['interval']
+        )
+
+    if obj['ends'] == 'On':
+        ends = 'UNTIL={until}'.format(until=obj['until'].strftime("%Y%m%dT%H%M%SZ"))
+
+    if obj['ends'] == 'After':
+        ends = 'COUNT={count}'.format(count=obj['count'])
+
+    if freq != '' or ends != '':
+        res = res + ':'
+        if freq != '':
+            res = res + freq
+        if ends !='':
+            res = res + ';' + ends
+    else :
+        res = None
+
+    return res
+
+class Recurrence(models.Model):
+    event = models.ForeignKey(Event, related_name='recurrences', on_delete=models.CASCADE)
+    rule = models.CharField(max_length=6, blank=False, choices=RECURRENCE_RULES, default='RRULE')
+    freq = models.CharField(max_length=10, blank=False, choices=RECURRENCE_FREQUENCES, default='DAILY')
+    count = models.IntegerField(blank=True, default=0)
+    ends = models.CharField(max_length=10, blank=False, choices=RECURRENCE_ENDS, default='Never')
+    until = models.DateField(blank=True, default=datetime.datetime.now)
+    interval = models.IntegerField(blank=True, default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return recurrence_json_2_string(self)
+
+
+    class Meta:
+        ordering = ('created_at',)
+        unique_together = ('id',)
+        verbose_name = _("Recurrence")
+        verbose_name_plural = _("Recurrences")
+        managed = True

@@ -95,3 +95,9 @@ In the case you run server with `0.0.0.0:8000` option
 	```
 	$ python manage.py makemigrations
 	```
+
+# Deployinig
+- Global server: Heroku
+- URL: https://gceventmanager.herokuapp.com/admin
+- Admin user name: admin
+- Admin password: 123qweasd
