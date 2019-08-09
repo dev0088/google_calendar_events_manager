@@ -143,9 +143,8 @@ class EventAdmin(nested_admin.NestedModelAdmin):
 
         if google_calendar_event != None: 
             
-
             # Add EventReceivers for each account matching to this event
-            current_event = Event.objects.filter(calendar_id=obj.calendar_id).first()
+            current_event = Event.objects.filter(calendar_event_id=obj.calendar_event_id).first()
 
             if change:
                 # Remove all associated old event_receivers.
@@ -158,3 +157,17 @@ class EventAdmin(nested_admin.NestedModelAdmin):
                     account=account
                 )
                 new_event_receiver.save()
+
+
+    # actions = [ 'delete_selected' ]
+	
+    # def delete_selected(self, request, queryset):
+    #     for obj in queryset:
+    #         if obj.calendar_event_id:
+    #             # Send delete_event request to google
+    #             res = google_calendar.delete_event(
+    #                 obj.calendar_event_id, 
+    #                 obj.sender.google_oauth2_client_id, 
+    #                 obj.sender.google_oauth2_secrete
+    #             )
+    #         obj.delete()
