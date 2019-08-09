@@ -46,13 +46,37 @@ def google_calendar_connection(oauth2_clinet_id, oauth2_secrete):
 
 def add_event(event, oauth2_clinet_id, oauth2_secrete):
     service = google_calendar_connection(oauth2_clinet_id, oauth2_secrete)
-    return service.events().insert(calendarId='primary', body=event).execute()
-
-def update_event(calendar_id, event_id, event, oauth2_clinet_id, oauth2_secrete):
-    service = google_calendar_connection(oauth2_clinet_id, oauth2_secrete)
     try:
-        event = service.events().get(calendarId=calendar_id, eventId=event_id).execute()
+        event = service.events().insert(
+            calendarId=settings.GOOGLE_CALENDAR_API_DEFAULT_CALENDAR_ID, 
+            body=event
+        ).execute()
+        print('====== add_event: ', event)
     except HttpError as e:
+        print('====== add_event: error: ', e)
         if e.resp.status==404:
             return None
-    return service.events().update(calendarId=calendar_id, eventId=event['id'], body=event).execute()
+    return event
+
+def update_event(event_id, event, oauth2_clinet_id, oauth2_secrete):
+    service = google_calendar_connection(oauth2_clinet_id, oauth2_secrete)
+    try:
+        origin_event = service.events().get(
+            calendarId=settings.GOOGLE_CALENDAR_API_DEFAULT_CALENDAR_ID, 
+            eventId=event_id
+        ).execute()
+        print('====== get_event: ', origin_event)
+        updated_event = service.events().update(
+            calendarId=settings.GOOGLE_CALENDAR_API_DEFAULT_CALENDAR_ID, 
+            eventId=event_id, 
+            body=event
+        ).execute()
+        print('====== updated_event: ', updated_event)
+    except HttpError as e:
+        print('====== update_event: error: ', e)
+        if e.resp.status==404:
+            return None
+    return updated_event
+
+# https://calendar.google.com/event?action=TEMPLATE&tmeid=Ym52aHRvbWJqNjVnZHBpZjVzMDJ2azFrY2MgbmluamFkZXY5OTlAbQ&tmsrc=ninjadev999%40gmail.com
+# https://calendar.google.com/calendar/embed?src=ninjadev999%40gmail.com&ctz=America%2FLos_Angeles

@@ -25,6 +25,7 @@ class Event(models.Model):
         related_query_name='account',
     )
     calendar_id = models.CharField(max_length=1024, blank=True, default='')
+    calendar_event_id = models.CharField(max_length=1024, blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
