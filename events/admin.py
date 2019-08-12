@@ -4,6 +4,7 @@ import json
 from .models import Override, Reminder, Recurrence, Event, recurrence_dict_2_string
 from django.utils.timezone import get_current_timezone
 from django.core.serializers.json import DjangoJSONEncoder
+from django import forms
 from . import google_calendar
 from accounts.models import Account
 from event_receivers.models import EventReceiver
@@ -24,6 +25,7 @@ class ReminderInline(nested_admin.NestedStackedInline):
     extra = 0
     inlines = [OverrideInline]
 
+
 class RecurrencInline(nested_admin.NestedStackedInline):
     model = Recurrence
     extra = 0
@@ -35,7 +37,7 @@ class RecurrencInline(nested_admin.NestedStackedInline):
     ]
     readonly_fields = ['rule']
 
-
+    
 @admin.register(Event)
 class EventAdmin(nested_admin.NestedModelAdmin):
     list_display = (
@@ -76,7 +78,6 @@ class EventAdmin(nested_admin.NestedModelAdmin):
 
     def save_related(self, request, form, formsets, change):
         obj = form.instance
-    
         # Make event json data
         event = {
             'summary': obj.summary,
@@ -92,7 +93,6 @@ class EventAdmin(nested_admin.NestedModelAdmin):
             },
             'attendees': [{'email': account.email} for account in form.cleaned_data['accounts']]
         }
-
         recurrence_formset_index = 1
         # Check reminder data and add them if set
         if formsets[0] and formsets[0].cleaned_data and formsets[0].cleaned_data[0]:
