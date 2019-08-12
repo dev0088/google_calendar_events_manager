@@ -1,4 +1,4 @@
-Python/Django + JWT auth backend
+Python/Django admin dashboard + Google Calendar API
 ================================
 
 ### Technical Stack
@@ -8,10 +8,13 @@ Python/Django + JWT auth backend
 	- Database: PostgreSQL
 
 ### Preinstall
+
+```
   $ export LANGUAGE="en_US.UTF-8"
   $ sudo apt-get install build-essential libssl-dev libffi-dev python-dev
   $ sudo apt-get install zlib1g-dev libjpeg-dev
   $ sudo apt-get install build-essential checkinstall
+```
 
 ### Python3.6 env
 

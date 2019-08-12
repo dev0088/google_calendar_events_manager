@@ -4,6 +4,7 @@ from accounts.models import Account
 from django.utils.translation import ugettext_lazy as _
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.core import serializers
+from django.core.exceptions import ValidationError
 import datetime
 
 
@@ -42,6 +43,13 @@ class Event(models.Model):
         ordering = ('start', 'end', 'sender')
         unique_together = ('id',)
         managed = True
+    
+    def clean(self):
+        # Check validations
+        start_date = self.start
+        end_date = self.end
+        if end_date < start_date:
+            raise ValidationError({'end': ['End date should be greater than start date.']})
 
 
 """
