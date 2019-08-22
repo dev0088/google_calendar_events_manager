@@ -39,18 +39,25 @@ class RecurrencInline(nested_admin.NestedStackedInline):
 
 def save_account_events(current_event, accounts):
     for account in accounts:
-        new_event_receiver = EventReceiver.objects.create(
-            event=current_event,
-            account=account
-        )
-        new_event_receiver.save()
+        previouse_event = EventReceiver.objects.filter(event=current_event, account=account).first()
+        if not previouse_event:
+            new_event_receiver = EventReceiver.objects.create(
+                event=current_event,
+                account=account
+            )
+            new_event_receiver.save()
 
 def save_calendar_event_id(current_event, calendar_event_id):
-    new_calendar_event = CalendarEvent.objects.create(
+    previouse_calendar_event = CalendarEvent.objects.filter(
         calendar_event_id=calendar_event_id,
         event=current_event
-    )
-    new_calendar_event.save()
+    ).first()
+    if not previouse_calendar_event:
+        new_calendar_event = CalendarEvent.objects.create(
+            calendar_event_id=calendar_event_id,
+            event=current_event
+        )
+        new_calendar_event.save()
 
 def batch_add_event_callback(request_id, response, exception):
     if exception is not None:
@@ -61,11 +68,7 @@ def batch_add_event_callback(request_id, response, exception):
     else:
         if response:
             current_event = Event.objects.all().order_by('-id').first()
-            
-            EventReceiver.objects.filter(event_id=current_event.id).delete()
             save_account_events(current_event, current_event.accounts.all())
-
-            CalendarEvent.objects.filter(event_id=current_event.id).delete()
             save_calendar_event_id(current_event, response.get('id'))
 
 def batch_update_event_callback(request_id, response, exception):
@@ -75,12 +78,9 @@ def batch_update_event_callback(request_id, response, exception):
         if exception.resp.status==404:
             return None
     else:
-        current_event = Event.objects.all().order_by('-id').first()
         if response:
-            EventReceiver.objects.filter(event_id=current_event.id).delete()
+            current_event = Event.objects.all().order_by('-id').first()
             save_account_events(current_event, current_event.accounts.all())
-
-            CalendarEvent.objects.filter(event_id=current_event.id).delete()
             save_calendar_event_id(current_event, response.get('id'))
 
 def batch_delete_event_callback(request_id, response, exception):
@@ -291,7 +291,11 @@ class EventAdmin(nested_admin.NestedModelAdmin):
         for account in form.cleaned_data['accounts']:
             event = self.make_event(obj, account, request, form, formsets)
             events.append(event)
-        
+
+        # Remove all event_receivers and calndar_events
+        EventReceiver.objects.filter(event_id=current_event.id).delete()
+        CalendarEvent.objects.filter(event_id=current_event.id).delete()
+
         # Send add_event request to google
         google_calendar.batch_add_events(
             events,
