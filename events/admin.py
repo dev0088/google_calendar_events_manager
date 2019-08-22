@@ -277,9 +277,7 @@ class EventAdmin(nested_admin.NestedModelAdmin):
     def send_batch_update_requests(self, request, form, formsets):
         obj = form.instance
         current_event = Event.objects.get(pk=obj.id)
-        print('====== current_event: ', current_event)
         current_calendar_event_ids = list(CalendarEvent.objects.filter(event=current_event).values_list('calendar_event_id', flat=True))
-        print('===== current_calendar_event_ids: ', current_calendar_event_ids)
         # Remove all previous calendar events
         google_calendar.batch_delete_events(
                 current_calendar_event_ids,
