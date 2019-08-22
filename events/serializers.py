@@ -1,7 +1,16 @@
 from rest_framework import serializers
-from .models import Event, Reminder, Override, Recurrence
+from .models import Event, Reminder, Override, Recurrence, CalendarEvent
 from accounts.serializers import AccountSerializer
 
+
+class CalendarEventSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = CalendarEvent
+        fields = (
+            'calendar_event_id',
+            'event',
+        )
 
 class OverrideSerializer(serializers.ModelSerializer):
     class Meta:
@@ -35,6 +44,7 @@ class EventSerializer(serializers.ModelSerializer):
     accounts = AccountSerializer(many=True, required=False)
     reminder = ReminderSerializer(many=False, required=False)
     recurrences = RecurrenceSerializer(many=True, required=False)
+    calendar_event_events = CalendarEventSerializer(many=True, required=False)
 
     class Meta:
         model = Event
@@ -46,5 +56,6 @@ class EventSerializer(serializers.ModelSerializer):
             'end',
             'accounts',
             'reminder',
-            'recurrences'
+            'recurrences',
+            'calendar_event_events'
         )

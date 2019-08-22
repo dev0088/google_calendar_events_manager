@@ -25,8 +25,8 @@ class Event(models.Model):
         related_name='event_set',
         related_query_name='account',
     )
-    calendar_id = models.CharField(max_length=1024, blank=True, default='')
-    calendar_event_id = models.CharField(max_length=1024, blank=True, default='')
+    # calendar_id = models.CharField(max_length=1024, blank=True, default='')
+    # calendar_event_id = models.CharField(max_length=1024, blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -51,6 +51,22 @@ class Event(models.Model):
         if end_date < start_date:
             raise ValidationError({'end': ['End date should be greater than start date.']})
 
+
+class CalendarEvent(models.Model):
+    calendar_event_id = models.CharField(max_length=1024, blank=False)
+    event = models.ForeignKey(Event, related_name='calendar_event_events', on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return "{caldendar_event_id}".format(
+            caldendar_event_id=self.caldendar_event_id
+        )
+
+    class Meta:
+        db_table = "calendar_event"
+        ordering = ('created_at',)
+        unique_together = ('id', 'calendar_event_id')
+        managed = True
 
 """
 Reminder model for event
