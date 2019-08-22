@@ -1,23 +1,23 @@
 from django.shortcuts import render
 from googleapiclient import discovery
 from googleapiclient.errors import HttpError
+from googleapiclient.http import BatchHttpRequest
 from oauth2client import tools
 from oauth2client.client import OAuth2WebServerFlow
 from oauth2client.file import Storage
 import httplib2shim
+
 import ssl
 from config import settings
 
 #---------------------------------------------------------------------------
 # google_calendar_connection
 #---------------------------------------------------------------------------
-def google_calendar_connection(oauth2_clinet_id, oauth2_secrete):
+def google_calendar_raw_connection(oauth2_clinet_id, oauth2_secrete):
     """
     This method used for connect with google calendar api.
     """
-    
     flags = tools.argparser.parse_args([])
-    
     redirect_uri = settings.GOOGLE_CALENDAR_API_REDIRECT_URI
     if not redirect_uri:
         httpd = tools.ClientRedirectServer(('localhost', 0), tools.ClientRedirectHandler)
@@ -41,9 +41,21 @@ def google_calendar_connection(oauth2_clinet_id, oauth2_secrete):
     http = httplib2shim.Http()
     http = credentials.authorize(http)
     service = discovery.build('calendar', 'v3', http=http)
-    
-    return service
 
+    return {
+        'http': http,
+        'service': service
+    }
+
+def google_calendar_connection(oauth2_clinet_id, oauth2_secrete):
+    """
+    This method used for connect with google calendar api.
+    """
+    raw_connection = google_calendar_raw_connection(oauth2_clinet_id, oauth2_secrete)
+    if raw_connection:
+        return raw_connection['service']
+    
+    return None
 
 def add_event(event, oauth2_clinet_id, oauth2_secrete):
     service = google_calendar_connection(oauth2_clinet_id, oauth2_secrete)
@@ -79,7 +91,6 @@ def update_event(event_id, event, oauth2_clinet_id, oauth2_secrete):
             return None
     return updated_event
 
-
 def delete_event(event_id, oauth2_clinet_id, oauth2_secrete):
     service = google_calendar_connection(oauth2_clinet_id, oauth2_secrete)
     try:
@@ -92,4 +103,19 @@ def delete_event(event_id, oauth2_clinet_id, oauth2_secrete):
         print('====== delete_event: error: ', e)
         return False
     return True
+
+def batch_add_events(events, oauth2_clinet_id, oauth2_secrete, callback):
+    raw_connection = google_calendar_raw_connection(oauth2_clinet_id, oauth2_secrete)
+    http = raw_connection['http']
+    service = raw_connection['service']
+    batch = BatchHttpRequest()
+
+    for event in events:
+        batch.add(service.events().insert(
+                calendarId=settings.GOOGLE_CALENDAR_API_DEFAULT_CALENDAR_ID, 
+                body=event
+            ),
+            callback
+        )
     
+    batch.execute(http=http)

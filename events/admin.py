@@ -37,7 +37,26 @@ class RecurrencInline(nested_admin.NestedStackedInline):
     ]
     readonly_fields = ['rule']
 
-    
+
+def save_calendar_event_id(current_event, calendar_event_id):
+    new_calendar_event = CalendarEvent.objects.create(
+        calendar_event_id=calendar_event_id,
+        event=current_event
+    )
+    new_calendar_event.save()
+
+def batch_add_event_callback(request_id, response, exception):
+    if exception is not None:
+        # Do something with the exception
+        print('====== add_event: error: ', exception)
+        if exception.resp.status==404:
+            return None
+    else:
+        current_event = Event.objects.all().order_by('-id').first()
+        if response: 
+            save_calendar_event_id(current_event, response.get('id'))
+
+
 @admin.register(Event)
 class EventAdmin(nested_admin.NestedModelAdmin):
     list_display = (
@@ -84,11 +103,64 @@ class EventAdmin(nested_admin.NestedModelAdmin):
     calendar_event_ids_display.short_description = "Calendar Evnet IDs"
 
     def save_related(self, request, form, formsets, change):
+        self.save_related_with_batch(request, form, formsets, change)
+
+    def save_related_with_batch(self, request, form, formsets, change):
+        """
+        Batch Request mode
+        """
         obj = form.instance
-        calendar_event_ids = []
-        # Make event json data
+        if not change:
+            self.send_batch_add_requests(request, form, formsets)
+        
+        obj.save()
+        super(EventAdmin, self).save_related(request, form, formsets, change)
+
+        current_event = Event.objects.get(pk=form.instance.id)
+        self.save_event_receivers(current_event, form, change)
+
+    def save_related_with_multiple_request(self, request, form, formsets, change):
+        """
+        Multiple requests mode
+        """
+        obj = form.instance
+        calendar_event_ids = self.send_multiple_requests(request, form, formsets, change)
+        
+        obj.save()
+        super(EventAdmin, self).save_related(request, form, formsets, change)
+
+        current_event = Event.objects.get(pk=form.instance.id)
+        self.save_related_elements(current_event, calendar_event_ids, form, change)
+
+    def save_event_receivers(self, current_event, form, change):
+        if change:
+            # Remove all associated old event_receivers.
+            EventReceiver.objects.filter(event_id=current_event.id).delete()
+
+        # for account in current_event.accounts.all():
         for account in form.cleaned_data['accounts']:
-            event = {
+            new_event_receiver = EventReceiver.objects.create(
+                event=current_event,
+                account=account
+            )
+            new_event_receiver.save()
+
+    def save_calendar_event_ids(self, current_event, calendar_event_ids, change):
+        if change:
+            # Remove all associated old calendar ids
+            CalendarEvent.objects.filter(calendar_event_ids=calendar_event_ids).delete()
+
+        for calendar_event_id in calendar_event_ids:
+            save_calendar_event_id(current_event, calendar_event_id)
+
+    def save_related_elements(self, current_event, calendar_event_ids, form, change):
+        # Get the saved event id
+        if len(calendar_event_ids) > 0:
+            self.save_event_receivers(current_event, form, change)
+            self.save_calendar_event_ids(current_event, calendar_event_ids, change)
+
+    def make_event(self, obj, account, request, form, formsets):
+        event = {
                 'summary': obj.summary,
                 'location': obj.sender.last_location,
                 'description': obj.description,
@@ -102,32 +174,38 @@ class EventAdmin(nested_admin.NestedModelAdmin):
                 },
                 'attendees': [{'email': account.email}]
             }
-            recurrence_formset_index = 1
-            # Check reminder data and add them if set
-            if formsets[0] and formsets[0].cleaned_data and formsets[0].cleaned_data[0]:
-                # Add useDefault value
-                event['reminders'] = ReminderSerializer(formsets[0].cleaned_data[0]).data 
-                recurrence_formset_index = 2
-                # Add overrides value
-                if formsets[1]:
-                    event['reminders']['overrides'] = []
-                    for override_form in formsets[1]:
-                        event['reminders']['overrides'].append(
-                            OverrideSerializer(override_form.cleaned_data).data
-                        )
+        recurrence_formset_index = 1
+        # Check reminder data and add them if set
+        if formsets[0] and formsets[0].cleaned_data and formsets[0].cleaned_data[0]:
+            # Add useDefault value
+            event['reminders'] = ReminderSerializer(formsets[0].cleaned_data[0]).data 
+            recurrence_formset_index = 2
+            # Add overrides value
+            if formsets[1]:
+                event['reminders']['overrides'] = []
+                for override_form in formsets[1]:
+                    event['reminders']['overrides'].append(
+                        OverrideSerializer(override_form.cleaned_data).data
+                    )
 
-            # Check recurrence data and add them if set
-            recurrenct_formset = formsets[recurrence_formset_index]
-            if recurrenct_formset and recurrenct_formset.cleaned_data:
-                # Add recurrence data
-                event['recurrence'] = []
-                for recurrence_form in recurrenct_formset:
-                    str_recurrence = recurrence_dict_2_string(recurrence_form.cleaned_data)
-                    if str_recurrence:
-                        event['recurrence'].append(str_recurrence)
+        # Check recurrence data and add them if set
+        recurrenct_formset = formsets[recurrence_formset_index]
+        if recurrenct_formset and recurrenct_formset.cleaned_data:
+            # Add recurrence data
+            event['recurrence'] = []
+            for recurrence_form in recurrenct_formset:
+                str_recurrence = recurrence_dict_2_string(recurrence_form.cleaned_data)
+                if str_recurrence:
+                    event['recurrence'].append(str_recurrence)
+            
+        return event
 
-            # print('====== generate_event: ', event)
-
+    def send_multiple_requests(self, request, form, formsets, change):
+        obj = form.instance
+        calendar_event_ids = []
+        # Make event json data
+        for account in form.cleaned_data['accounts']:
+            event = self.make_event(obj, account, request, form, formsets)
             if change:
                 # Update event
                 google_calendar_event = google_calendar.update_event(
@@ -146,44 +224,23 @@ class EventAdmin(nested_admin.NestedModelAdmin):
                 
             if google_calendar_event != None:
                 calendar_event_ids.append(google_calendar_event.get('id'))
-            
-        # Save model
-        obj.save()
-        super(EventAdmin, self).save_related(request, form, formsets, change)
+        
+        return calendar_event_ids
 
-        # Get the saved event id        
-        event_pk = form.instance.id
-        if len(calendar_event_ids) > 0: 
-            
-            # Add EventReceivers for each account matching to this event
-            current_event = Event.objects.get(pk=event_pk)
+    def send_batch_add_requests(self, request, form, formsets):
+        obj = form.instance
+        events = []
+        for account in form.cleaned_data['accounts']:
+            event = self.make_event(obj, account, request, form, formsets)
+            events.append(event)
 
-            if change:
-                # Remove all associated old event_receivers.
-                EventReceiver.objects.filter(event_id=current_event.id).delete()
-
-            # for account in current_event.accounts.all():
-            for account in form.cleaned_data['accounts']:
-                new_event_receiver = EventReceiver.objects.create(
-                    event=current_event,
-                    account=account
-                )
-                new_event_receiver.save()
-            
-            # Set calndear_event_ids
-            if change:
-                # Remove all associated old calendar ids
-                CalendarEvent.objects.filter(calendar_event_ids=calendar_event_ids).delete()
-
-            for calendar_event_id in calendar_event_ids:
-                new_calendar_event = CalendarEvent.objects.create(
-                    calendar_event_id=calendar_event_id,
-                    event=current_event
-                )
-                new_calendar_event.save()
-            
-            # print('===== current_event: ', EventSerializer(current_event).data)
-
+        # Send add_event request to google
+        google_calendar.batch_add_events(
+            events,
+            obj.sender.google_oauth2_client_id, 
+            obj.sender.google_oauth2_secrete,
+            batch_add_event_callback
+        )    
 
     # def delete_selected(self, request, queryset):
     #     for obj in queryset:
