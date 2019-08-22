@@ -37,6 +37,13 @@ class RecurrencInline(nested_admin.NestedStackedInline):
     ]
     readonly_fields = ['rule']
 
+def save_account_events(current_event, accounts):
+    for account in accounts:
+        new_event_receiver = EventReceiver.objects.create(
+            event=current_event,
+            account=account
+        )
+        new_event_receiver.save()
 
 def save_calendar_event_id(current_event, calendar_event_id):
     new_calendar_event = CalendarEvent.objects.create(
@@ -53,7 +60,8 @@ def batch_add_event_callback(request_id, response, exception):
             return None
     else:
         current_event = Event.objects.all().order_by('-id').first()
-        if response: 
+        if response:
+            save_account_events(current_event, current_event.accounts.all())
             save_calendar_event_id(current_event, response.get('id'))
 
 
@@ -137,13 +145,7 @@ class EventAdmin(nested_admin.NestedModelAdmin):
             # Remove all associated old event_receivers.
             EventReceiver.objects.filter(event_id=current_event.id).delete()
 
-        # for account in current_event.accounts.all():
-        for account in form.cleaned_data['accounts']:
-            new_event_receiver = EventReceiver.objects.create(
-                event=current_event,
-                account=account
-            )
-            new_event_receiver.save()
+        save_account_events(current_event, form.cleaned_data['accounts'])
 
     def save_calendar_event_ids(self, current_event, calendar_event_ids, change):
         if change:
