@@ -59,11 +59,39 @@ def batch_add_event_callback(request_id, response, exception):
         if exception.resp.status==404:
             return None
     else:
-        current_event = Event.objects.all().order_by('-id').first()
         if response:
+            current_event = Event.objects.all().order_by('-id').first()
+            
+            EventReceiver.objects.filter(event_id=current_event.id).delete()
             save_account_events(current_event, current_event.accounts.all())
+
+            CalendarEvent.objects.filter(event_id=current_event.id).delete()
             save_calendar_event_id(current_event, response.get('id'))
 
+def batch_update_event_callback(request_id, response, exception):
+    if exception is not None:
+        # Do something with the exception
+        print('====== update_event: error: ', exception)
+        if exception.resp.status==404:
+            return None
+    else:
+        current_event = Event.objects.all().order_by('-id').first()
+        if response:
+            EventReceiver.objects.filter(event_id=current_event.id).delete()
+            save_account_events(current_event, current_event.accounts.all())
+
+            CalendarEvent.objects.filter(event_id=current_event.id).delete()
+            save_calendar_event_id(current_event, response.get('id'))
+
+def batch_delete_event_callback(request_id, response, exception):
+    if exception is not None:
+        # Do something with the exception
+        print('====== delete_event: error: ', exception)
+        if exception.resp.status==404:
+            return None
+    else:
+        if response:
+            print('===== deleted: response: ', response)
 
 @admin.register(Event)
 class EventAdmin(nested_admin.NestedModelAdmin):
@@ -118,7 +146,9 @@ class EventAdmin(nested_admin.NestedModelAdmin):
         Batch Request mode
         """
         obj = form.instance
-        if not change:
+        if change:
+            self.send_batch_update_requests(request, form, formsets)
+        else:
             self.send_batch_add_requests(request, form, formsets)
         
         obj.save()
@@ -236,6 +266,34 @@ class EventAdmin(nested_admin.NestedModelAdmin):
             event = self.make_event(obj, account, request, form, formsets)
             events.append(event)
 
+        # Send add_event request to google
+        google_calendar.batch_add_events(
+            events,
+            obj.sender.google_oauth2_client_id, 
+            obj.sender.google_oauth2_secrete,
+            batch_add_event_callback
+        )    
+
+    def send_batch_update_requests(self, request, form, formsets):
+        obj = form.instance
+        current_event = Event.objects.get(pk=obj.id)
+        print('====== current_event: ', current_event)
+        current_calendar_event_ids = list(CalendarEvent.objects.filter(event=current_event).values_list('calendar_event_id', flat=True))
+        print('===== current_calendar_event_ids: ', current_calendar_event_ids)
+        # Remove all previous calendar events
+        google_calendar.batch_delete_events(
+                current_calendar_event_ids,
+                obj.sender.google_oauth2_client_id, 
+                obj.sender.google_oauth2_secrete,
+                batch_delete_event_callback
+            )
+
+        # Add all new calendar events
+        events = []
+        for account in form.cleaned_data['accounts']:
+            event = self.make_event(obj, account, request, form, formsets)
+            events.append(event)
+        
         # Send add_event request to google
         google_calendar.batch_add_events(
             events,

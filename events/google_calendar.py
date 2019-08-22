@@ -96,7 +96,7 @@ def delete_event(event_id, oauth2_clinet_id, oauth2_secrete):
     try:
         res = service.events().delete(
             calendarId=settings.GOOGLE_CALENDAR_API_DEFAULT_CALENDAR_ID, 
-            eventId='eventId'
+            eventId=event_id
         ).execute()
         print('====== delete_event: ', res)
     except HttpError as e:
@@ -117,5 +117,43 @@ def batch_add_events(events, oauth2_clinet_id, oauth2_secrete, callback):
             ),
             callback
         )
+    
+    batch.execute(http=http)
+
+def batch_update_events(event_ids, events, oauth2_clinet_id, oauth2_secrete, callback):
+    raw_connection = google_calendar_raw_connection(oauth2_clinet_id, oauth2_secrete)
+    http = raw_connection['http']
+    service = raw_connection['service']
+    batch = BatchHttpRequest()
+
+    index = 0
+    for event_id in event_ids:
+        batch.add(service.events().update(
+                calendarId=settings.GOOGLE_CALENDAR_API_DEFAULT_CALENDAR_ID, 
+                eventId=event_id, 
+                body=events[index]
+            ),
+            callback
+        )
+        index = index + 1
+    
+    batch.execute(http=http)
+
+def batch_delete_events(event_ids, oauth2_clinet_id, oauth2_secrete, callback):
+    raw_connection = google_calendar_raw_connection(oauth2_clinet_id, oauth2_secrete)
+    http = raw_connection['http']
+    service = raw_connection['service']
+    batch = BatchHttpRequest()
+
+    index = 0
+    for event_id in event_ids:
+        batch.add(
+            service.events().delete(
+                calendarId=settings.GOOGLE_CALENDAR_API_DEFAULT_CALENDAR_ID, 
+                eventId=event_id
+            ),
+            callback
+        )
+        index = index + 1
     
     batch.execute(http=http)
