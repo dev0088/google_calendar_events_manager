@@ -17,7 +17,7 @@ from django.conf.urls import url, include
 from django.contrib import admin
 
 urlpatterns = [
-    url(r'^admin/', admin.site.urls),
+    url(r'^', admin.site.urls),
     url(r'^_nested_admin/', include('nested_admin.urls')),
     url(r'^privacy/', admin.site.urls),
     url(r'^termsofservice/', admin.site.urls),
