@@ -1,6 +1,7 @@
 from django.contrib import admin
 import nested_admin
 import json
+import logging
 from .models import Override, Reminder, Recurrence, Event, CalendarEvent, recurrence_dict_2_string
 from django.utils.timezone import get_current_timezone
 from django.core.serializers.json import DjangoJSONEncoder
@@ -8,6 +9,7 @@ from django import forms
 from . import google_calendar
 from accounts.models import Account
 from event_receivers.models import EventReceiver
+from senders.models import Oauth2Token
 from .serializers import EventSerializer, ReminderSerializer, OverrideSerializer, RecurrenceSerializer
 from django.core import serializers
 from rest_framework.renderers import JSONRenderer
@@ -62,7 +64,7 @@ def save_calendar_event_id(current_event, calendar_event_id):
 def batch_add_event_callback(request_id, response, exception):
     if exception is not None:
         # Do something with the exception
-        print('====== add_event: error: ', exception)
+        logging.error('add_event: error: ' + exception)
         if exception.resp.status==404:
             return None
     else:
@@ -86,12 +88,12 @@ def batch_update_event_callback(request_id, response, exception):
 def batch_delete_event_callback(request_id, response, exception):
     if exception is not None:
         # Do something with the exception
-        print('====== delete_event: error: ', exception)
+        logging.error('delete_event: error: ' + exception)
         if exception.resp.status==404:
             return None
     else:
         if response:
-            print('===== deleted: response: ', response)
+            logging.error('deleted: response: ', response)
 
 @admin.register(Event)
 class EventAdmin(nested_admin.NestedModelAdmin):
@@ -147,9 +149,9 @@ class EventAdmin(nested_admin.NestedModelAdmin):
         """
         obj = form.instance
         if change:
-            self.send_batch_update_requests(request, form, formsets)
+            self.send_batch_update_requests(request, form, formsets, change)
         else:
-            self.send_batch_add_requests(request, form, formsets)
+            self.send_batch_add_requests(request, form, formsets, change)
         
         obj.save()
         super(EventAdmin, self).save_related(request, form, formsets, change)
@@ -259,22 +261,47 @@ class EventAdmin(nested_admin.NestedModelAdmin):
         
         return calendar_event_ids
 
-    def send_batch_add_requests(self, request, form, formsets):
+    def get_credentials_from_db(self, sender_id):
+        oauth2token = Oauth2Token.objects.filter(sender_id=sender_id).first()
+        credentials = None
+        if oauth2token and oauth2token.text:
+            credentials = oauth2token.text
+        return credentials
+
+    def send_batch_add_requests(self, request, form, formsets, change):
         obj = form.instance
+        # # Check oauth2 info of sender
+        # if not obj.sender.google_oauth2_client_id:
+        #     raise ValidationError({'sender': ['This sender don\'t include OAuth2 client id. Please add it into this sender.']})
+        # if not obj.sender.google_oauth2_secrete:
+        #     raise ValidationError({'sender': ['This sender don\'t include OAuth2 google oauth2_secrete. Please add it into this sender.']})
+        # # Check credentials
+        # credentials = self.get_credentials_from_db(obj.sender.id)
+        # if not credentials:
+        #     error_message = 'This sender {sender_email} don\'t have oauth2 access-token, yet. Please send this link {register_link} to the sender. So he can register with his google account, again.'.format(
+        #         sender_email=sender.email,
+        #         register_link=settings.REGISTER_URL
+        #     )
+        #     raise ValidationError({'sender': [error_message]})      
+
         events = []
         for account in form.cleaned_data['accounts']:
             event = self.make_event(obj, account, request, form, formsets)
             events.append(event)
-
+        
+      
         # Send add_event request to google
         google_calendar.batch_add_events(
             events,
             obj.sender.google_oauth2_client_id, 
             obj.sender.google_oauth2_secrete,
+            obj.sender.id,
+            change,
+            self.get_credentials_from_db(obj.sender.id),
             batch_add_event_callback
         )    
 
-    def send_batch_update_requests(self, request, form, formsets):
+    def send_batch_update_requests(self, request, form, formsets, change):
         obj = form.instance
         current_event = Event.objects.get(pk=obj.id)
         current_calendar_event_ids = list(CalendarEvent.objects.filter(event=current_event).values_list('calendar_event_id', flat=True))
@@ -283,6 +310,9 @@ class EventAdmin(nested_admin.NestedModelAdmin):
                 current_calendar_event_ids,
                 obj.sender.google_oauth2_client_id, 
                 obj.sender.google_oauth2_secrete,
+                obj.sender.id,
+                change,
+                self.get_credentials_from_db(obj.sender.id),
                 batch_delete_event_callback
             )
 
@@ -301,6 +331,9 @@ class EventAdmin(nested_admin.NestedModelAdmin):
             events,
             obj.sender.google_oauth2_client_id, 
             obj.sender.google_oauth2_secrete,
+            obj.sender.id,
+            change,
+            self.get_credentials_from_db(obj.sender.id),
             batch_add_event_callback
         )    
 

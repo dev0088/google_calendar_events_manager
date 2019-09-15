@@ -1,41 +1,45 @@
 from django.shortcuts import render
-from googleapiclient import discovery
+from googleapiclient import discovery, sample_tools
 from googleapiclient.errors import HttpError
 from googleapiclient.http import BatchHttpRequest
-from oauth2client import tools
-from oauth2client.client import OAuth2WebServerFlow
+from oauth2client import client, tools
+from oauth2client.client import OAuth2WebServerFlow, AccessTokenCredentials
 from oauth2client.file import Storage
-import httplib2shim
-
-import ssl
+from google_auth_oauthlib.flow import InstalledAppFlow
 from config import settings
+import httplib2shim
+import google.auth
+import requests
+import json
+import ssl
+import logging
 
+SCOPES = 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events'
 #---------------------------------------------------------------------------
 # google_calendar_connection
 #---------------------------------------------------------------------------
-def google_calendar_raw_connection(oauth2_clinet_id, oauth2_secrete):
+def google_calendar_raw_connection(oauth2_clinet_id, oauth2_secrete, sender_id, change, org_credentials):
     """
     This method used for connect with google calendar api.
     """
-    flags = tools.argparser.parse_args([])
-    redirect_uri = settings.GOOGLE_CALENDAR_API_REDIRECT_URI
-    if not redirect_uri:
-        httpd = tools.ClientRedirectServer(('localhost', 0), tools.ClientRedirectHandler)
-        httpd.timeout = 60
-        redirect_uri = 'http://%s:%s/' % httpd.server_address        
-
-    flow = OAuth2WebServerFlow(
-        client_id=oauth2_clinet_id, 
-        client_secret=oauth2_secrete,
-        redirect_uri=redirect_uri,
-        scope='https://www.googleapis.com/auth/calendar',
-        user_agent=settings.GOOGLE_CALENDAR_API_APP_NAME
+    if not org_credentials:
+        error_message = 'This sender {sender_id} don\'t have oauth2 access-token, yet. Please send this link {register_link} to the sender. So he can register with his google account, again.'.format(
+            sender_id=sender_id,
+            register_link=settings.REGISTER_URL
         )
-    storage = Storage('calendar.dat')
-    credentials = storage.get()
-    if credentials is None or credentials.invalid == True:
-        credentials = tools.run_flow(flow, storage, flags)
-    
+        logging.error(error_message)
+        return None
+    else:
+        json_credentials = json.loads(org_credentials)
+        credentials = client.GoogleCredentials(None,
+            json_credentials['client_id'],
+            json_credentials['client_secret'],
+            json_credentials['refresh_token'],
+            json_credentials['token_expiry'],
+            "https://accounts.google.com/o/oauth2/token",
+            None
+        )
+        
     # Create an httplib2.Http object to handle our HTTP requests and authorize it
     # with our good Credentials.
     http = httplib2shim.Http()
@@ -47,11 +51,17 @@ def google_calendar_raw_connection(oauth2_clinet_id, oauth2_secrete):
         'service': service
     }
 
-def google_calendar_connection(oauth2_clinet_id, oauth2_secrete):
+def google_calendar_connection(oauth2_clinet_id, oauth2_secrete, sender_id, change, org_credentials=None):
     """
     This method used for connect with google calendar api.
     """
-    raw_connection = google_calendar_raw_connection(oauth2_clinet_id, oauth2_secrete)
+    raw_connection = google_calendar_raw_connection(
+        oauth2_clinet_id, 
+        oauth2_secrete, 
+        sender_id,
+        change,
+        org_credentials
+    )
     if raw_connection:
         return raw_connection['service']
     
@@ -104,8 +114,14 @@ def delete_event(event_id, oauth2_clinet_id, oauth2_secrete):
         return False
     return True
 
-def batch_add_events(events, oauth2_clinet_id, oauth2_secrete, callback):
-    raw_connection = google_calendar_raw_connection(oauth2_clinet_id, oauth2_secrete)
+def batch_add_events(events, oauth2_clinet_id, oauth2_secrete, sender_id, change, org_credentials, callback):
+    raw_connection = google_calendar_raw_connection(
+        oauth2_clinet_id, 
+        oauth2_secrete,
+        sender_id,
+        change,
+        org_credentials
+    )
     http = raw_connection['http']
     service = raw_connection['service']
     batch = BatchHttpRequest()
@@ -120,8 +136,14 @@ def batch_add_events(events, oauth2_clinet_id, oauth2_secrete, callback):
     
     batch.execute(http=http)
 
-def batch_update_events(event_ids, events, oauth2_clinet_id, oauth2_secrete, callback):
-    raw_connection = google_calendar_raw_connection(oauth2_clinet_id, oauth2_secrete)
+def batch_update_events(event_ids, events, oauth2_clinet_id, oauth2_secrete, sender_id, change, org_credentials, callback):
+    raw_connection = google_calendar_raw_connection(
+        oauth2_clinet_id, 
+        oauth2_secrete,
+        sender_id,
+        change,
+        org_credentials
+    )
     http = raw_connection['http']
     service = raw_connection['service']
     batch = BatchHttpRequest()
@@ -139,8 +161,14 @@ def batch_update_events(event_ids, events, oauth2_clinet_id, oauth2_secrete, cal
     
     batch.execute(http=http)
 
-def batch_delete_events(event_ids, oauth2_clinet_id, oauth2_secrete, callback):
-    raw_connection = google_calendar_raw_connection(oauth2_clinet_id, oauth2_secrete)
+def batch_delete_events(event_ids, oauth2_clinet_id, oauth2_secrete, sender_id, change, org_credentials, callback):
+    raw_connection = google_calendar_raw_connection(
+        oauth2_clinet_id, 
+        oauth2_secrete,
+        sender_id,
+        change,
+        org_credentials
+    )
     http = raw_connection['http']
     service = raw_connection['service']
     batch = BatchHttpRequest()

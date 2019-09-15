@@ -36,3 +36,29 @@ class SenderAdmin(ImportExportModelAdmin):
         'created_at',
         'last_location'
     )
+
+@admin.register(models.Oauth2Token)
+class Oauth2TokenAdmin(admin.ModelAdmin):
+    list_display = (
+        'sender_display',
+        'access_token',
+        'refresh_token',
+        'token_expiry',
+        'code',
+        'created_at',
+        'updated_at'
+    )
+    list_display_links = (
+        'sender_display',
+        'access_token',
+        'refresh_token',
+        'token_expiry',
+        'code',
+        'created_at',
+        'updated_at'
+    )
+    list_per_page = 50
+    fields = ['sender', 'access_token', 'refresh_token', 'token_expiry', 'code', 'text']
+
+    def sender_display(self, obj):
+        return obj.sender.email
