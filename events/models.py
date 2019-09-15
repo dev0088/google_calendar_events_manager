@@ -6,6 +6,8 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.core import serializers
 from django.core.exceptions import ValidationError
 import datetime
+from senders.models import Oauth2Token
+from config import settings
 
 
 class Event(models.Model):
@@ -45,6 +47,22 @@ class Event(models.Model):
         managed = True
     
     def clean(self):
+        # Check oauth2 info of sender
+        if not self.sender.google_oauth2_client_id:
+            raise ValidationError({'sender': ['This sender don\'t include OAuth2 client id. Please add it into this sender.']})
+        if not self.sender.google_oauth2_secrete:
+            raise ValidationError({'sender': ['This sender don\'t include OAuth2 google oauth2_secrete. Please add it into this sender.']})
+        # Check credentials
+        oauth2token = Oauth2Token.objects.filter(sender_id=self.sender.id).first()
+        credentials = None
+        if oauth2token and oauth2token.text:
+            credentials = oauth2token.text
+        if not credentials:
+            error_message = 'This sender {sender_email} don\'t have oauth2 access-token, yet. Please send this link {register_link} to the sender. So he can register with his google account, again.'.format(
+                sender_email=self.sender.email,
+                register_link=settings.REGISTER_URL
+            )
+            raise ValidationError({'sender': [error_message]})    
         # Check validations
         start_date = self.start
         end_date = self.end

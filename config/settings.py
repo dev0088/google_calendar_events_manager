@@ -29,7 +29,7 @@ DEBUG = True
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
-    'ea3f60cd.ngrok.io',
+    'cfa834d6.ngrok.io',
     os.environ.get('SERVER_HOST', 'gceventmanager.herokuapp.com')
 ]
 
@@ -75,7 +75,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'core/base_templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -154,15 +154,23 @@ GOOGLE_CALENDAR_API_CLIENT_SECRET = os.environ.get(
 )
 GOOGLE_CALENDAR_API_APP_NAME = os.environ.get(
     'GOOGLE_CALENDAR_API_APP_NAME', 
-    'GccEnventManagerAPI'
+    'GcEventManagerHeroku'
 )
 GOOGLE_CALENDAR_API_REDIRECT_URI = os.environ.get(
     'GOOGLE_CALENDAR_API_REDIRECT_URI', 
-    'https://ea3f60cd.ngrok.io'
+    'http://localhost:8000/sender/register/access_token/'
+)
+GOOGLE_CALENDAR_API_SCOPES = os.environ.get(
+    'GOOGLE_CALENDAR_API_REDIRECT_URI', 
+    'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events'
 )
 GOOGLE_CALENDAR_API_DEFAULT_CALENDAR_ID = os.environ.get(
     'GOOGLE_CALENDAR_API_DEFAULT_CALENDAR_ID', 
     'primary'
+)
+REGISTER_URL = os.environ.get(
+    'REGISTER_URL', 
+    'http://localhost:8000/sender/register/account/'
 )
 HTTPS_PROXY = os.environ.get(
     'https_proxy', 
@@ -232,6 +240,9 @@ LOGGING = {
 
 STATIC_URL = '/static/'
 STATIC_ROOT = 'static'
+# STATICFILES_DIRS = (
+#     os.path.join(BASE_DIR, 'core', 'base_static'),
+# )
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
